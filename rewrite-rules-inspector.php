@@ -279,6 +279,7 @@ class Rewrite_Rules_Inspector
 		if ( !current_user_can( $this->view_cap ) || !$this->flushing_enabled )
 			wp_die( __( 'You do not have permissions to perform this action.' ) );
 
+		wp_cache_delete( 'rewrite_rules', 'options' );
 		flush_rewrite_rules( false );
 		do_action( 'rri_flush_rules' );
 
