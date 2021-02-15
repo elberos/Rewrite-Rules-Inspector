@@ -4,11 +4,11 @@
  * Plugin URI: http://wordpress.org/extend/plugins/rewrite-rules-inspector/
  * Description: Simple WordPress Admin view for inspecting your rewrite rules
  * Author: Daniel Bachhuber, Automattic
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author URI: http://automattic.com/
  */
 
-define( 'REWRITE_RULES_INSPECTOR_VERSION', '1.2.1' );
+define( 'REWRITE_RULES_INSPECTOR_VERSION', '1.2.2' );
 define( 'REWRITE_RULES_INSPECTOR_ROOT', dirname( __FILE__ ) );
 define( 'REWRITE_RULES_INSPECTOR_FILE_PATH' , REWRITE_RULES_INSPECTOR_ROOT . '/' . basename( __FILE__ ) );
 
@@ -161,11 +161,20 @@ class Rewrite_Rules_Inspector
 
 		// Filter based on match or source if necessary
 		foreach( $rewrite_rules_array as $rule => $data ) {
+			$matches = [];
+			$math_res = preg_match( "!^$rule!", $match_path, $matches );
+			$match_flag = true;
 			// If we're searching rules based on URL and there's no match, don't return it
-			if ( ! empty( $match_path ) && ! preg_match( "#^$rule#", $match_path ) ) {
+			if ( ! empty( $match_path ) && ! $math_res ) {
 				unset( $rewrite_rules_array[$rule] );
+				$match_flag = false;
 			} elseif ( $should_filter_by_source && $data['source'] != $_GET['source'] ) {
 				unset( $rewrite_rules_array[$rule] );
+				$match_flag = false;
+			}
+			if ($match_flag)
+			{
+				$rewrite_rules_array[$rule]['matches'] = $matches;
 			}
 		}
 
@@ -416,6 +425,7 @@ class Rewrite_Rules_Inspector_List_Table extends WP_List_Table {
 		$columns = array(
 				'rule'          => __( 'Rule', 'rewrite-rules-inspector' ),
 				'rewrite'       => __( 'Rewrite', 'rewrite-rules-inspector' ),
+				'matches'        => __( 'Matches', 'rewrite-rules-inspector' ),
 				'source'        => __( 'Source', 'rewrite-rules-inspector' ),
 			);
 		return $columns;
@@ -440,7 +450,18 @@ class Rewrite_Rules_Inspector_List_Table extends WP_List_Table {
 		$rule = $item['rule'];
 		$source = $item['source'];
 		$rewrite = $item['rewrite'];
-
+		$matches = $item['matches'];
+		$matches = array_map
+		(
+			function($item, $index)
+			{
+				return $index . ") " .$item;
+			},
+			$matches,
+			array_keys($matches)
+		);
+		$matches = implode("\n", $matches);
+		
 		$class = 'source-' . $source;
 
 		echo "<tr class='$class'>";
@@ -458,6 +479,9 @@ class Rewrite_Rules_Inspector_List_Table extends WP_List_Table {
 					break;
 				case 'source':
 					echo "<td class='column-source'>" . esc_html( $source ) . "</td>";
+					break;
+				case 'matches':
+					echo "<td class='column-source'>" . nl2br(esc_html( $matches )) . "</td>";
 					break;
 			}
 		}
